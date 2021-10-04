@@ -1,2 +1,3 @@
 # Pens
-A collection of fontTools pens in Swift
+
+A description of this package.
