@@ -61,25 +61,45 @@ protocol AbstractPen {
     
     // Add a sub glyph. The 'transformation' argument must be a 6-tuple
     // containing an affine transformation
-    // func addComponent(glyphName: String, transformation: (Double, Double, Double, Double, Double, Double))
+     func addComponent(glyphName: String, transformation: CGAffineTransform) throws
     
 }
 
+struct Glyph {
+    func draw(pen: AbstractPen) {
+        pen.moveTo(pt: CGPoint(x: 0.0, y: 0.0))
+        pen.lineTo(pt: CGPoint(x: 0.0, y: 100.0))
+        do {
+            try pen.curveTo(points: [CGPoint(x: 50.0, y: 75.0),
+                                     CGPoint(x: 60.0, y: 50.0),
+                                     CGPoint(x: 50.0, y: 25.0),
+                                     CGPoint(x: 0.0, y: 0.0)])
+        } catch {
+            print("\(error)")
+        }
+        pen.closePath()
+    }
+}
+
 class BasePen: AbstractPen {
-    
+
     enum Error: Swift.Error, Equatable {
         case notImplementedError
         case missingCurrentPoint
         case curveToMistake
         case noPoints
         case lastOrFirstOffcurveIsNIL
+        case missingComponent
     }
     
+    var glyphSet: [String: Glyph]
+    let skipMissingComponents: Bool = true
     private var currentPoint: CGPoint? = nil
-    
-    init(glyphSet: [String]? = nil) {
+
+    public init(glyphSet: [String: Glyph] = [:]) {
+        self.glyphSet = glyphSet
     }
-    
+
     // must override
     func _moveTo(pt: CGPoint) throws {
         throw Error.notImplementedError
@@ -231,11 +251,21 @@ class BasePen: AbstractPen {
         }
         
     }
-    //    func addComponent(glyphName: String,
-    //                      transformation: (Double, Double, Double, Double, Double, Double)) {
-    //        <#code#>
-    //    }
-    
+
+    func addComponent(glyphName: String, transformation: CGAffineTransform) throws {
+        // Transform the points of the base glyph and draw it onto self
+        
+        if let glyph = glyphSet[glyphName] {
+            let tPen = TransformPen(outPen: self, transformation: transformation)
+            glyph.draw(pen: tPen)
+        } else {
+            if !skipMissingComponents {
+                throw Error.missingComponent
+            } else {
+                print("missing \(glyphName)")
+            }
+        }
+    }
 }
 
 enum DecomposeError: Error, Equatable {
