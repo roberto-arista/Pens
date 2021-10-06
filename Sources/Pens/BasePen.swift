@@ -81,16 +81,11 @@ struct Glyph {
     }
 }
 
+
+
 class BasePen: AbstractPen {
 
-    enum Error: Swift.Error, Equatable {
-        case notImplementedError
-        case missingCurrentPoint
-        case curveToMistake
-        case noPoints
-        case lastOrFirstOffcurveIsNIL
-        case missingComponent
-    }
+
     
     var glyphSet: [String: Glyph]
     let skipMissingComponents: Bool = true
@@ -102,20 +97,20 @@ class BasePen: AbstractPen {
 
     // must override
     func _moveTo(pt: CGPoint) throws {
-        throw Error.notImplementedError
+        throw PenError.notImplementedError
     }
     
     func _lineTo(pt: CGPoint) throws {
-        throw Error.notImplementedError
+        throw PenError.notImplementedError
     }
     
     func _curveToOne(pt1: CGPoint, pt2: CGPoint, pt3: CGPoint) throws {
-        throw Error.notImplementedError
+        throw PenError.notImplementedError
     }
     
     // may override
-    func _closePath() { }
-    func _endPath() { }
+    func _closePath() throws { }
+    func _endPath() throws { }
     
     func _qCurveToOne(pt1: CGPoint, pt2: CGPoint) throws {
         // This method implements the basic quadratic curve type. The
@@ -130,7 +125,7 @@ class BasePen: AbstractPen {
                                  pt2: CGPoint(x: mid2x, y: mid2y),
                                  pt3: pt2)
         } else {
-            throw Error.missingCurrentPoint
+            throw PenError.missingCurrentPoint
         }
     }
     
@@ -142,15 +137,15 @@ class BasePen: AbstractPen {
     }
     
     func closePath() {
-        self._closePath()
+        try! self._closePath()
         self.currentPoint = nil
     }
     
     func endPath() {
-        self._endPath()
+        try? self._endPath()
         self.currentPoint = nil
     }
-    
+
     func moveTo(pt: CGPoint) {
         do {
             try self._moveTo(pt: pt)
@@ -173,7 +168,7 @@ class BasePen: AbstractPen {
 
         let n = points.count - 1  // 'n' is the number of control points
         guard n >= 0 else {
-            throw Error.noPoints
+            throw PenError.noPoints
         }
 
         if n == 2 {
@@ -211,9 +206,8 @@ class BasePen: AbstractPen {
         
         let n = points.count - 1  // 'n' is the number of control points
         guard n >= 0 else {
-            throw Error.noPoints
+            throw PenError.noPoints
         }
-        print(n)
         
         if points[points.count-1] == nil {
             // Special case for TrueType quadratics: it is possible to
@@ -230,7 +224,7 @@ class BasePen: AbstractPen {
                 explicitPoints = points.dropLast(1).map { $0! }
                 explicitPoints.append(impliedStartPoint)
             } else {
-                throw Error.lastOrFirstOffcurveIsNIL
+                throw PenError.lastOrFirstOffcurveIsNIL
             }
         } else {
             explicitPoints = points.map { $0! }
@@ -260,16 +254,12 @@ class BasePen: AbstractPen {
             glyph.draw(pen: tPen)
         } else {
             if !skipMissingComponents {
-                throw Error.missingComponent
+                throw PenError.missingComponent
             } else {
                 print("missing \(glyphName)")
             }
         }
     }
-}
-
-enum DecomposeError: Error, Equatable {
-    case notEnoughPoints
 }
 
 func decomposeSuperBezierSegment(points: [CGPoint]) throws -> [(CGPoint, CGPoint, CGPoint)] {
@@ -283,7 +273,7 @@ func decomposeSuperBezierSegment(points: [CGPoint]) throws -> [(CGPoint, CGPoint
     
     let n = points.count - 1
     guard n > 1 else {
-        throw DecomposeError.notEnoughPoints
+        throw PenError.notEnoughPoints
     }
     var bezierSegments = [(CGPoint, CGPoint, CGPoint)]()
     var pt1: CGPoint = points[0]
@@ -327,7 +317,7 @@ func decomposeQuadraticSegment(points: [CGPoint]) throws -> [(CGPoint, CGPoint)]
     
     let n = points.count - 1
     guard n > 0 else {
-        throw DecomposeError.notEnoughPoints
+        throw PenError.notEnoughPoints
     }
     
     var quadSegments = [(CGPoint, CGPoint)]()
