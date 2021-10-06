@@ -1,6 +1,7 @@
 # Pens
 
-A collection of fontTools pens in Swift.
+A collection of [fontTools](https://github.com/fonttools/fonttools) pens in Swift.
 
 Ported pens:
 - BasePen
+- AreaPen
